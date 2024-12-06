@@ -1,3 +1,7 @@
+#MIT License
+#Copyright (c) 2024 Oskar D.
+#https://github.com/Verisran/Verisan-GodotLibraryScripts
+
 extends Node3D
 class_name physics 
 
