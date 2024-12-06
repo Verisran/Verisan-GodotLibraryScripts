@@ -1,3 +1,7 @@
+#MIT License
+#Copyright (c) 2024 Oskar D.
+#https://github.com/Verisran/Verisan-GodotLibraryScripts
+
 extends Node
 class_name SaveSys
 
