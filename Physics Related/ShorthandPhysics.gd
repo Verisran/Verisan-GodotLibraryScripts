@@ -13,6 +13,9 @@ static func get_camera_ray(camera: Camera3D, mouse_pos: Vector2, length: float)-
 	return [from, to]
 
 #simpler raycast
+# ray_to can also be considered the length of the raycast if you put the following as the parameter (ray_from + directional_vec)
+## example use - raycast(select_node, null, select_node.postition, selct_node.position - select.transform.basis.x * length, layers) 
+## (+/- select_node.transform.basis.x would be a position to the right and left of the node respectively)
 static func raycast(myself: Node3D, space_state: PhysicsDirectSpaceState3D, ray_from: Vector3, ray_to: Vector3, layers: int, bodies: bool = true, areas: bool = false)->Dictionary:
 	if(space_state == null):
 		space_state = myself.get_world_3d().direct_space_state
