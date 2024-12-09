@@ -14,6 +14,7 @@ static func build_graphics_dict(window_res: Vector2, is_fullscreen: bool, fps_ma
 
 # GODOT 4.4 will be adding Static typed Dicts, Dictionary[String, InputEvent], not too important
 ##Automatically creates dictionary from input map excluding any "ui" prefixed inputs, will store both InputEventKey and InputEventMouseButton
+##PLEASE NOTE: For this to work you will have to use "Keycode (Latin equivalent)" as the input type in your InputMap Actions
 static func build_bind_dict()->Dictionary:
 	var bind_dict: Dictionary
 	for action:String in InputMap.get_actions():
