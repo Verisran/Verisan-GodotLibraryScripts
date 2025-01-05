@@ -1,29 +1,101 @@
 extends Node
 
 @onready var window: Window = get_tree().root
-var save_path: String = "user://default_preset.save"
-var preset_selection: int
+
+#Settings path
+const preset_save_path: String = "user://PresetSelection.save"
+var preset_name: Array[String]
+var preset_selection: int = 0
+
+var settings_name: String:
+	get:
+		return preset_name[preset_selection]
+var settings_path: String:
+	get:
+		return "user://" + settings_name + ".save"
+	set(value):
+		push_error("This var should not be set directly, please set the settings_name var instead")
 
 #DATA
-var General: GeneralSet = preload("res://Autoloads/Settings/DefaultSets/DefaultGeneral.tres")
-var Graphics: GraphicsSet = preload("res://Autoloads/Settings/DefaultSets/DefaultGraphics.tres")
+var General: GeneralSet = preload("res://Default/DefaultGeneral.tres")
+var Graphics: GraphicsSet = preload("res://Default/DefaultGraphics.tres")
 var Binds: Dictionary = build_bind_dict()
 
 #Save state
-var settings_applied: bool = true
+signal applied_changed(value: bool)
+
+var settings_applied: bool = true:
+	set(value):
+		if(value != settings_applied):
+			emit_signal("applied_changed", value)
+		settings_applied = value
 var do_rebind: bool = false
 
-#--------------------------------Select Set--------------------------------#
-func select_graphics_preset(setPath: String = "default")->void:
-	if(setPath == "default"):
-		Graphics = load("res://Autoloads/Settings/DefaultGraphics.tres")
-	Graphics = load(setPath)
+func _ready() -> void:
+	preset_selection_load()
 
+#-----------------------------SAVE & LOAD-----------------------------#
+#Presets
+func update_preset_list(target: OptionButton, first_load: bool = false)->void:
+	target.clear()
+	for item in preset_name:
+		target.add_item(item)
+	if(first_load):
+		target.select(preset_selection)
+
+func add_preset(preset: String)->void:
+	if(preset_name.has(preset)):
+		print("This preset exists already")
+		return
+	preset_name.append(preset)
+	preset_selection = preset_name.size()-1
+	
+func select_preset(index: int)->void:
+	preset_selection = index
+	#settings_name = preset_name[preset_selection]
+
+func preset_selection_save(create_default: bool = false)->void:
+	if(create_default):
+		add_preset("Default Preset")
+	var save_file: FileAccess = FileAccess.open(preset_save_path, FileAccess.WRITE)
+	#If selector file doesnt exist, create new default
+	save_file.store_var(preset_name, true)
+	save_file.store_var(preset_selection, true)
+	#FileAccess.set_hidden_attribute(preset_save_path, true)#FileAccess.set_hidden_attribute(preset_save_path, false)
+
+func preset_selection_load()->void:
+	#If selector file doesnt exist, create new default
+	if(!FileAccess.file_exists(preset_save_path)):
+		preset_selection_save(true)
+	var preset_file: FileAccess = FileAccess.open(preset_save_path, FileAccess.READ)
+	preset_name = preset_file.get_var(true)
+	preset_selection = preset_file.get_var(true)
+
+#Settings
+##Saves to file path
+func save_settings(path: String = settings_path)->void:
+	var save_file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	save_file.store_var(General, true)
+	save_file.store_var(Graphics, true)
+	save_file.store_var(build_bind_dict(), true)
+	preset_selection_save()
+
+##Reads settings and adds to data, doubles as a check if file exists
+func read_settings(path: String = settings_path)->Dictionary: 
+	if(FileAccess.file_exists(path)):
+		var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+		General = file.get_var(true)
+		Graphics = file.get_var(true)
+		return file.get_var(true)
+	return {}
+
+#--------------------------------Select Set--------------------------------#
 #Check if property exists, needed if new settings are to be added
 func check_exists(property: String)->bool:
 	if(property in General or property in Graphics):
 		return true
 	return false
+
 #----------------------------READ, APPLY DATA------------------------------#
 #General
 func app_sens(sens_owner: Node3D)->void:
@@ -74,23 +146,6 @@ func build_bind_dict()->Dictionary:
 				elif(a_bind is InputEventMouseButton):
 					bind_dict.get_or_add(action, a_bind)
 	return bind_dict
-	
-#-----------------------------SAVE & LOAD-----------------------------#
-##Saves to file path
-func save_settings(path: String = save_path)->void:
-	var save_file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
-	save_file.store_var(General, true)
-	save_file.store_var(Graphics, true)
-	save_file.store_var(build_bind_dict(), true)
-
-##Reads settings and adds to data, 
-func read_settings(path: String = save_path)->Dictionary: 
-	if(FileAccess.file_exists(path)):
-		var file: FileAccess = FileAccess.open(path, FileAccess.READ)
-		General = file.get_var(true)
-		Graphics = file.get_var(true)
-		return file.get_var(true)
-	return {}
 
 #--------------------------------BINDS--------------------------------#
 var current_button: BindButton
@@ -122,6 +177,7 @@ func rebind_action(target_button: BindButton, new_key: int, mode: int)->void:
 		1: #Handles Key inputs
 			if(new_key == 8388607): #FIX FOR UK KEYBOARD LAYOUT RETURNING (UNKOWN) FOR QuoteLeft
 				new_key = 96
+			@warning_ignore("int_as_enum_without_cast")
 			new_bind.keycode = new_key #as InputEventKey
 			InputMap.action_add_event(target_button.action_name, new_bind)
 			target_button.set_text(rename_btn(target_button.action_name, new_bind.as_text_keycode()) )
