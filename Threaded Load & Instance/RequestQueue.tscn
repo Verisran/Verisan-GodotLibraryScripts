@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8dygjwxouer"]
+
+[ext_resource type="Script" path="res://Autoloads/ThreadLoad/ThreadLoadRequest.gd" id="1_2s7br"]
+
+[node name="RequestQueue" type="Node"]
+process_mode = 3
+process_thread_group = 2
+process_thread_group_order = 0
+process_thread_messages = 0
+script = ExtResource("1_2s7br")
