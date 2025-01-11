@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_3rwmu")
-window_res = Vector2i(1440, 810)
+window_res = Vector2(1440, 810)
 fullscreen = false
 fps = 0
 scale_mode = 0

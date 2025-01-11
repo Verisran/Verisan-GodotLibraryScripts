@@ -4,24 +4,37 @@ extends Node
 
 #Settings path
 const preset_save_path: String = "user://PresetSelection.save"
-var preset_name: Array[String]
-var preset_selection: int = 0
-
-var settings_name: String:
-	get:
-		return preset_name[preset_selection]
-var settings_path: String:
-	get:
-		return "user://" + settings_name + ".save"
+var preset_names: Array[String]
+var preset_selection: int = 0:
 	set(value):
-		push_error("This var should not be set directly, please set the settings_name var instead")
+		if(value == 0):
+			disable_remove = true
+		else:
+			disable_remove = false
+		preset_selection = value
+var preset_name: String:
+	get:
+		return preset_names[preset_selection]
+	set(value):
+		preset_names[preset_selection] = value
+var preset_path: String:
+	get:
+		return "user://" + preset_name + ".save"
+
+var disable_remove: bool = false
 
 #DATA
-var General: GeneralSet = preload("res://Default/DefaultGeneral.tres")
-var Graphics: GraphicsSet = preload("res://Default/DefaultGraphics.tres")
-var Binds: Dictionary = build_bind_dict()
+#Default Sets
+const DEFAULT_GENERAL: GeneralSet = preload("res://Presets/DefaultGeneral.tres")
+const DEFAULT_GRAPHICS: GraphicsSet = preload("res://Presets/DefaultGraphics.tres")
+@onready var DEFAULT_BINDS: Dictionary = build_bind_dict()
+#Active Sets
+var General: GeneralSet = DEFAULT_GENERAL
+var Graphics: GraphicsSet = DEFAULT_GRAPHICS
+var Binds: Dictionary = DEFAULT_BINDS
 
 #Save state
+@warning_ignore("unused_signal")
 signal applied_changed(value: bool)
 
 var settings_applied: bool = true:
@@ -34,62 +47,92 @@ var do_rebind: bool = false
 func _ready() -> void:
 	preset_selection_load()
 
-#-----------------------------SAVE & LOAD-----------------------------#
-#Presets
+#-----------------------------PRESETS-----------------------------#
 func update_preset_list(target: OptionButton, first_load: bool = false)->void:
 	target.clear()
-	for item in preset_name:
+	for item in preset_names:
 		target.add_item(item)
 	if(first_load):
 		target.select(preset_selection)
+	preset_selection_save()
 
-func add_preset(preset: String)->void:
-	if(preset_name.has(preset)):
-		print("This preset exists already")
+#returns true if creation successful
+func add_preset(preset: String)->bool:
+	#if(preset_names.size() > 10):
+	#	return false
+	if(preset_names.has(preset)):
+		return false
+		#preset already exists
+	preset_names.append(preset)
+	preset_selection = preset_names.size()-1
+	return true
+
+func remove_selected_preset()->void:
+	if(preset_selection == 0):
 		return
-	preset_name.append(preset)
-	preset_selection = preset_name.size()-1
-	
+	DirAccess.remove_absolute(preset_path)
+	preset_names.remove_at(preset_selection)
+	preset_selection = 0
+
+#returns true if rename was successful
+func rename_selected_preset(new_name: String)->bool:
+	if(preset_names.has(new_name)):
+		return false
+		#preset already exists
+	DirAccess.rename_absolute(preset_path, "user://" + new_name + ".save")
+	preset_name = new_name
+	return true
+
 func select_preset(index: int)->void:
 	preset_selection = index
-	#settings_name = preset_name[preset_selection]
 
+#SAVE & LOAD
 func preset_selection_save(create_default: bool = false)->void:
-	if(create_default):
-		add_preset("Default Preset")
-	var save_file: FileAccess = FileAccess.open(preset_save_path, FileAccess.WRITE)
 	#If selector file doesnt exist, create new default
-	save_file.store_var(preset_name, true)
+	if(create_default):
+		add_preset("DefaultPreset")
+	var save_file: FileAccess = FileAccess.open(preset_save_path, FileAccess.WRITE)
+	save_file.store_var(preset_names, true)
 	save_file.store_var(preset_selection, true)
-	#FileAccess.set_hidden_attribute(preset_save_path, true)#FileAccess.set_hidden_attribute(preset_save_path, false)
+	
 
 func preset_selection_load()->void:
 	#If selector file doesnt exist, create new default
 	if(!FileAccess.file_exists(preset_save_path)):
 		preset_selection_save(true)
 	var preset_file: FileAccess = FileAccess.open(preset_save_path, FileAccess.READ)
-	preset_name = preset_file.get_var(true)
+	preset_names = preset_file.get_var(true)
 	preset_selection = preset_file.get_var(true)
-
-#Settings
+	
+#-----------------------------SETTINGS-----------------------------#
+#SAVE & LOAD
 ##Saves to file path
-func save_settings(path: String = settings_path)->void:
+func save_settings(save_defaults: bool = false, path: String = preset_path)->void:
 	var save_file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
-	save_file.store_var(General, true)
-	save_file.store_var(Graphics, true)
-	save_file.store_var(build_bind_dict(), true)
+	if(save_defaults):
+		print(DEFAULT_BINDS)
+		save_file.store_var(DEFAULT_GENERAL, true)
+		save_file.store_var(DEFAULT_GRAPHICS, true)
+		save_file.store_var(DEFAULT_BINDS, true)
+	else:
+		save_file.store_var(General, true)
+		save_file.store_var(Graphics, true)
+		save_file.store_var(build_bind_dict(), true)
 	preset_selection_save()
 
 ##Reads settings and adds to data, doubles as a check if file exists
-func read_settings(path: String = settings_path)->Dictionary: 
+func read_settings(path: String = preset_path)->void:
 	if(FileAccess.file_exists(path)):
+		Binds.clear()
 		var file: FileAccess = FileAccess.open(path, FileAccess.READ)
 		General = file.get_var(true)
 		Graphics = file.get_var(true)
-		return file.get_var(true)
-	return {}
+		Binds = file.get_var(true)
 
-#--------------------------------Select Set--------------------------------#
+func read_default()->void:
+	save_settings(true)
+
+#--------------------------------Check--------------------------------#
 #Check if property exists, needed if new settings are to be added
 func check_exists(property: String)->bool:
 	if(property in General or property in Graphics):
@@ -97,14 +140,37 @@ func check_exists(property: String)->bool:
 	return false
 
 #----------------------------READ, APPLY DATA------------------------------#
-#General
+#GENERAL
+#Gameplay
 func app_sens(sens_owner: Node3D)->void:
 	sens_owner.set_sens(General.sens)
 
 func app_fov(fov_owner: Node3D)->void:
 	fov_owner.base_fov = General.fov
 
-#Graphics
+#Audio
+func app_master_volume(volume: float = General.master_vol)->void:
+	General.master_vol = volume
+	AudioServer.set_bus_volume_db(AudioManager.AudioBus.Master, volume_helper(General.master_vol))
+	AudioServer.set_bus_mute(AudioManager.AudioBus.Master, (volume <= 0))
+
+func app_music_volume(volume: float = General.music_vol)->void:
+	General.music_vol = volume
+	AudioServer.set_bus_volume_db(AudioManager.AudioBus.Music, volume_helper(General.music_vol))
+	AudioServer.set_bus_mute(AudioManager.AudioBus.Music, (volume <= 0))
+
+func app_sfx_volume(volume: float = General.sfx_vol)->void:
+	General.sfx_vol = volume
+	AudioServer.set_bus_volume_db(AudioManager.AudioBus.SFX, volume_helper(General.sfx_vol))
+	AudioServer.set_bus_mute(AudioManager.AudioBus.SFX, (volume <= 0))
+
+func volume_helper(volume: float)->float:
+	if(volume <= 0):
+		return -60
+	volume = linear_to_db(volume*0.01)
+	return volume
+
+#GRAPHICS
 func app_window_res(setto: Vector2i = Graphics.window_res)->void:
 	Graphics.window_res = setto
 	#set pixel size of window
@@ -175,7 +241,7 @@ func rebind_action(target_button: BindButton, new_key: int, mode: int)->void:
 	var new_mouse: InputEventMouseButton = InputEventMouseButton.new()
 	match mode:
 		1: #Handles Key inputs
-			if(new_key == 8388607): #FIX FOR UK KEYBOARD LAYOUT RETURNING (UNKOWN) FOR QuoteLeft
+			if(new_key == 8388607): #TEMP FIX FOR UK KEYBOARD LAYOUT RETURNING (UNKOWN) FOR QuoteLeft
 				new_key = 96
 			@warning_ignore("int_as_enum_without_cast")
 			new_bind.keycode = new_key #as InputEventKey

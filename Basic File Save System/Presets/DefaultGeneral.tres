@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="GeneralSet" load_steps=2 format=3 uid="uid://bnfosvucodc4i"]
+
+[ext_resource type="Script" path="res://Autoloads/Settings/GeneralSetting.gd" id="1_cv4dq"]
+
+[resource]
+script = ExtResource("1_cv4dq")
+sens = 5.0
+fov = 90.0
+master_vol = 100.0
+music_vol = 100.0
+sfx_vol = 100.0

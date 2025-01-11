@@ -1,8 +1,0 @@
-[gd_resource type="Resource" script_class="GeneralSet" load_steps=2 format=3 uid="uid://c3o1fg3qdyx7k"]
-
-[ext_resource type="Script" path="res://Autoloads/Settings/GeneralSetting.gd" id="1_vbemu"]
-
-[resource]
-script = ExtResource("1_vbemu")
-sens = 5.0
-fov = 90.0
