@@ -25,8 +25,7 @@ Request resource, Load and Instance inside worker thread
 
 Ability to assign a custom add callable
 
-Automatically recieve resource to target node based on provided logic (unless default is used)
-
+Automatically recieve resource to target node in the manner defined by the provided 'add_func' 
 
 Extra info
 -
