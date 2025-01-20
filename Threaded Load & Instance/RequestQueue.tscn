@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://c8dygjwxouer"]
 
-[ext_resource type="Script" path="res://Autoloads/ThreadLoad/ThreadLoadRequest.gd" id="1_2s7br"]
+[ext_resource type="Script" path="res://Threaded Load & Instance/ThreadLoadRequest.gd" id="1_2s7br"]
 
 [node name="RequestQueue" type="Node"]
 process_mode = 3
