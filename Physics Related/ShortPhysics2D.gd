@@ -3,7 +3,7 @@ extends Node2D
 func vec_toward_mouse(from_node: Node2D)->Vector2:
 	var hold_rotation: float = from_node.rotation
 	from_node.look_at(get_global_mouse_position())
-	var result: Vector2 = transform.x
+	var result: Vector2 = from_node.transform.x
 	from_node.rotation = hold_rotation
 	return result
 
